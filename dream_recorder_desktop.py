@@ -357,19 +357,30 @@ def serve_audio(filename):
 # =============================
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run the Dream Recorder desktop app.')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode.')
+    args = parser.parse_args()
+
+    # Determine host and port
+    host = app.config.get("HOST", "127.0.0.1")
+    port = app.config.get("PORT", 5000)
+
     # Initialize sample dreams if they don't exist
     init_sample_dreams_if_missing()
-    
+
+    # Welcome message
     print("🌙 Dream Recorder Desktop Edition")
-    print("=" * 40)
-    print("Starting server...")
-    print(f"Open your browser to: http://127.0.0.1:5000")
+    print("========================================")
+    print(f"Starting server...")
+    print(f"Open your browser to: http://{host}:{port}")
     print("Press Ctrl+C to stop the server")
-    print("=" * 40)
-    
-    # Run the application
-    socketio.run(app, 
-                host="127.0.0.1", 
-                port=5000, 
-                debug=True,
-                allow_unsafe_werkzeug=True) 
+    print("========================================")
+
+    # Run the app
+    socketio.run(
+        app,
+        host=host,
+        port=port,
+        debug=False,
+        use_reloader=False
+    ) 

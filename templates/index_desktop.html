@@ -188,31 +188,31 @@
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
+                    // Stream the data chunk to the server as it becomes available
+                    if (event.data.size > 0) {
+                        window.socket.emit('stream_recording', { data: event.data });
+                    }
                 };
 
                 mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const arrayBuffer = reader.result;
-                        const uint8Array = new Uint8Array(arrayBuffer);
-                        window.socket.emit('stream_recording', { data: Array.from(uint8Array) });
-                    };
-                    reader.readAsArrayBuffer(audioBlob);
+                    // All data has been sent. Now, notify the server to finalize the file.
+                    console.log("Recording stream ended.");
+                    window.socket.emit('stop_recording');
                 };
-
-                mediaRecorder.start();
+                
+                // Start recording and capture data in chunks every second
+                mediaRecorder.start(1000);
                 isRecording = true;
                 
                 document.getElementById('recordBtn').innerHTML = '<i class="bi bi-stop-circle"></i> Stop Recording';
                 document.getElementById('recordBtn').classList.add('recording');
                 updateStatus('Recording...');
                 
+                // Notify the server that recording has started
                 window.socket.emit('start_recording');
             } catch (error) {
                 console.error('Error starting recording:', error);
@@ -220,17 +220,21 @@
             }
         }
 
-        function stopRecording() {
+        async function stopRecording() {
             if (mediaRecorder && isRecording) {
+                // Stop the recorder, which will trigger 'ondataavailable' for the last time,
+                // and then 'onstop'.
                 mediaRecorder.stop();
+
+                // Stop the media stream tracks to turn off the microphone light.
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                
+
                 isRecording = false;
+
+                // Update UI
                 document.getElementById('recordBtn').innerHTML = '<i class="bi bi-mic"></i> Start Recording';
                 document.getElementById('recordBtn').classList.remove('recording');
                 updateStatus('Processing...');
-                
-                window.socket.emit('stop_recording');
             }
         }
 
