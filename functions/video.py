@@ -16,11 +16,16 @@ def process_video(input_path, logger=None):
             temp_path = temp_file.name
         # Apply FFmpeg filters using environment variables
         stream = ffmpeg.input(input_path)
-        stream = ffmpeg.filter(stream, 'eq', brightness=float(get_config()['FFMPEG_BRIGHTNESS']))
-        stream = ffmpeg.filter(stream, 'vibrance', intensity=float(get_config()['FFMPEG_VIBRANCE']))
-        stream = ffmpeg.filter(stream, 'vaguedenoiser', threshold=float(get_config()['FFMPEG_DENOISE_THRESHOLD']))
-        stream = ffmpeg.filter(stream, 'bilateral', sigmaS=float(get_config()['FFMPEG_BILATERAL_SIGMA']))
-        stream = ffmpeg.filter(stream, 'noise', all_strength=float(get_config()['FFMPEG_NOISE_STRENGTH']))
+        # Use eq filter for brightness and contrast
+        stream = ffmpeg.filter(stream, 'eq', brightness=float(get_config()['FFMPEG_BRIGHTNESS']), contrast=1.2)
+        # Use hue filter for saturation
+        stream = ffmpeg.filter(stream, 'hue', s=float(get_config()['FFMPEG_VIBRANCE']))
+        # Use hqdn3d for denoising (more commonly available)
+        stream = ffmpeg.filter(stream, 'hqdn3d', 4.0, 3.0, 6.0, 4.5)
+        # Add slight noise for dreamy effect
+        stream = ffmpeg.filter(stream, 'noise', alls=float(get_config()['FFMPEG_NOISE_STRENGTH']))
+        # Add slight blur for dreamy effect
+        stream = ffmpeg.filter(stream, 'gblur', sigma=1.5)
         stream = ffmpeg.output(stream, temp_path)
         # Run FFmpeg
         ffmpeg.run(stream, overwrite_output=True, quiet=True)
